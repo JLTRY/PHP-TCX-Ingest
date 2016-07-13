@@ -24,12 +24,12 @@ class TCXIngest extends GPXIngest{
 		
 	}
 	
-	public 	function getSegmentscount($track) {		
+	public function getSegmentscount($track) {		
 		//TCXIngest::my_log("segments:" . count($this->journey->journeys->$track->segments));
 		return count($this->journey->journeys->$track->segments);
 	}
 	
-	public 	function getjourneyscount() {		
+	public function getjourneyscount() {		
 		return count($this->journey->journeys);
 	}
 	
@@ -134,10 +134,8 @@ class TCXIngest extends GPXIngest{
 					$timemoving = 0;
 					$timestationary = 0;
 
-
 					// Set the segment key
 					$segkey = $this->genSegKey($b);
-
 
 					// Initialise the segment object
 					$this->initSegment($jkey,$segkey);
