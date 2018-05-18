@@ -1,5 +1,5 @@
 <?php
-/** GPXIngest Class
+/** TCXIngest Class
 *
 * Class to Ingest a basic GPX file, generate stats, convert it into an object and allow some basic manipulation.
 * After ingest, the object can be output as JSON for easy storage with stats intact.
@@ -11,17 +11,18 @@
 *
 * Where issue keys are included (GPXIN-[0-9]+), the relevant issue can be viewed at http://projects.bentasker.co.uk/jira_projects/browse/GPXIN.html
 */
+
 $LOGFILE=dirname(__FILE__)."/log.txt";
 if (file_exists($LOGFILE)){
 	//unlink($LOGFILE);
 }
-class TCXIngest extends GPXIngest{
+class TCXIngest extends \GPXIngest\GPXIngest{
 	
 	function initTrack($jkey,$trk)
 	{
 		parent::initTrack($jkey,$trk);
 		$this->journey->journeys->$jkey->stats->desc = "";
-		
+		//$this->suppresslocation = true;		
 	}
 	
 	public function getSegmentscount($track) {		
@@ -123,7 +124,7 @@ class TCXIngest extends GPXIngest{
 			//specific for tcx
 				array_push($this->getStats($jkey)->laps, (object)array('TotalTimeSeconds' => (string)$lap->TotalTimeSeconds,
 														'DistanceMeters' => (string)$lap->DistanceMeters,
-														'Speed' => (3600*$lap->DistanceMeters)/(int)$lap->TotalTimeSeconds));	
+														'Speed' => ($lap->TotalTimeSeconds==0)?0 : (3600*$lap->DistanceMeters)/(int)$lap->TotalTimeSeconds));	
 			// There may be multiple segments if GPS connectivity was lost - process each seperately
 				foreach ($lap->Track as $trkseg){
 				// Initialise the sub-stats variable
