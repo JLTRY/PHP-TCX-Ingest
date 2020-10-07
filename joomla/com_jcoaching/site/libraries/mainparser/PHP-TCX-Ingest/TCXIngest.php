@@ -715,7 +715,7 @@ class TCXIngest {
 	*
 	*/
 	protected function writeSegmentStats(&$activity, &$segment,$times,$x,$uom,$timemoving,$timestationary){
-		if (!$this->suppressspeed){
+		if (!$this->suppressspeed && is_array($this->sspeed)){
 			$modesearch = array_count_values($this->sspeed);
 			if ($x!=0)
 				$segment->stats->avgspeed = round($this->speed/$x,2);
