@@ -160,7 +160,7 @@ class TCXActivity {
 	public $segments;
 	
 	function __construct($jkey, $trk){		
-		$this->$name = $trk->name;
+		$this->name = $trk->name;
 		$this->jkey = $jkey;
 		$this->segments = new \stdClass();
 		$this->laps = array();
@@ -183,9 +183,6 @@ class TCXActivity {
 	}
 }
 
-
-class TCXIngestActivity extends TCXActivity {
-}
 
 class TCXIngest {
 	
@@ -503,8 +500,10 @@ class TCXIngest {
 							//$point->speedint = $ptspeed;
 							// Calculate speed stats
 							//$this->speed = $this->speed + $ptspeed;
-							$this->fspeed[] = $ptspeed;
-							$this->sspeed[] = $ptspeed;
+							if (isset($ptspeed)) {
+								$this->fspeed[] = $ptspeed;
+								$this->sspeed[] = $ptspeed;
+							}
 
 							// Calculate acceleration
 							list($acc,$decc) = $this->calculateAcceleration($point->speed, $time,'kph');
