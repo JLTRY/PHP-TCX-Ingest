@@ -160,7 +160,7 @@ class TCXActivity {
 	public $segments;
 	
 	function __construct($jkey, $trk){		
-		$this->name = $trk->name;
+		$this->name = (string)$trk->name;
 		$this->jkey = $jkey;
 		$this->segments = new \stdClass();
 		$this->laps = array();
@@ -183,6 +183,9 @@ class TCXActivity {
 	}
 }
 
+
+class TCXIngestActivity extends TCXActivity {
+}
 
 class TCXIngest {
 	
