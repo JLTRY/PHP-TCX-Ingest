@@ -112,8 +112,8 @@ class TCXActivityStats {
 	public $start;
 	public $end;
 	
-	function __construct($trk){
-		$this->summary = (string)$trk->attributes()['Sport'];
+	function __construct($summary= "other"){
+		$this->summary = (string)$summary;
 		$this ->bounds = new BuildBoundsObj();
 		$this->laps = array();
 		$this->speedUoM = array();
@@ -164,7 +164,7 @@ class TCXActivity {
 		$this->jkey = $jkey;
 		$this->segments = new \stdClass();
 		$this->laps = array();
-		$this->stats = new  TCXActivityStats($trk);
+		$this->stats = new  TCXActivityStats($trk->attributes()['Sport']);
 	}
 	
 	public function __sleep()
@@ -175,6 +175,8 @@ class TCXActivity {
 		);
 	}
 	
+
+	
 	public function addLap($lap) {
 		$this->stats->addLap($lap);
 		$curlap = new TCXLap();
@@ -184,8 +186,7 @@ class TCXActivity {
 }
 
 
-class TCXIngestActivity extends TCXActivity {
-}
+
 
 class TCXIngest {
 	
