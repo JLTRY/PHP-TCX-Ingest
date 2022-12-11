@@ -1,10 +1,11 @@
 <?php
 /** TCXIngest Class
 *
-* Class to Ingest a basic GPX file, generate stats, convert it into an object and allow some basic manipulation.
+* Class to Ingest a basic TCX file, generate stats, convert it into an object and allow some basic manipulation.
 * After ingest, the object can be output as JSON for easy storage with stats intact.
+* code adapted form GPXPArser
 *
-* @copyright (C) 2013 B Tasker (http://www.bentasker.co.uk). All rights reserved
+* @copyright (C) 2013 JL TRYOEN jltryoen.fr 
 * @license GNU GPL V2 - See LICENSE
 *
 * @version 1.2
@@ -111,6 +112,10 @@ class TCXActivityStats {
 	public $laps;
 	public $start;
 	public $end;
+	public $totalspeed;
+	public $totaltime;
+	public $totaldistance;
+	public $totalelev;
 	
 	function __construct($summary= "other"){
 		$this->summary = (string)$summary;
@@ -139,14 +144,15 @@ class TCXActivityStats {
 			"end",
 			"totalspeed",
 			"totaltime",
-			"totaldistance"
+			"totaldistance",
+			"totalelev"
 		);
 	}
 	
 	function addLap($lap) {
 		array_push($this->laps, (object)array('TotalTimeSeconds' => (string)$lap->TotalTimeSeconds,
 									'DistanceMeters' => (string)$lap->DistanceMeters,
-									'Speed' => ($lap->TotalTimeSeconds==0)?0 : (3600*$lap->DistanceMeters)/(int)$lap->TotalTimeSeconds));	
+									'Speed' => ($lap->TotalTimeSeconds==0)?0 : (3600*$lap->DistanceMeters)/(int)$lap->TotalTimeSeconds));
 	
 	}
 }
@@ -337,7 +343,7 @@ class TCXIngest {
 		$zeroed_stats = array ('trackpoints','recordedDuration','segments','tracks',
 								'maxacceleration','maxdeceleration','mindeceleration',
 								'avgacceleration','avgdeceleration','timeMoving','timeStationary',
-								'timeAccelerating','timeDecelerating','distanceTravelled');
+								'timeAccelerating','timeDecelerating','distanceTravelled', 'totalelev');
 		
 		foreach ($zeroed_stats as $k){
 			$this->journey->stats->$k = 0;
@@ -418,17 +424,18 @@ class TCXIngest {
 								}
 								$ext = array();
 								foreach ($trkpt->Extensions->children($nsuri) as $t){
-								  if (!count($t->children($nsuri))) {
-									  $ext[$t->getName()] = (string)$t;
-								  } else 
-								  foreach ($t->children($nsuri) as $t1){
-									  $ext[$t1->getName()] = (string)$t1;
-								  }
+									if (!count($t->children($nsuri))) {
+										$ext[$t->getName()] = (string)$t;
+									} else {
+										foreach ($t->children($nsuri) as $t1){
+											$ext[$t1->getName()] = (string)$t1;
+										}
+									}
 								}
 								if (count($ext)) {
 									$point->extensions->$ns = $ext;
 								}
-							  }
+							}
 						}
 						if (property_exists($trkpt, 'HeartRateBpm') )
 						{
@@ -801,11 +808,11 @@ class TCXIngest {
 		if (!$this->suppressspeed){
 			$sumspeed = array_sum($this->fspeed);
 			$modesearch = array_count_values($this->fspeed);
-			$this->journeyspeeds = array_merge($this->journeyspeeds,$this->fspeed);
-			$activity->stats->maxSpeed = max($this->fspeed);
-			$activity->stats->minSpeed = min($this->fspeed);
-			$activity->stats->modalSpeed = array_search(max($modesearch), $modesearch);
-			$activity->stats->avgspeed = round($sumspeed/$ptcount,2);
+			$this->journeyspeeds = array_merge($this->journeyspeeds,$this->fspeed); 
+			$activity->stats->maxSpeed = count($this->fspeed)? max($this->fspeed): 0;
+			$activity->stats->minSpeed = count($this->fspeed)? min($this->fspeed): 0;
+			$activity->stats->modalSpeed = array_search(count($modesearch)? max($modesearch): 0, $modesearch);
+			$activity->stats->avgspeed = $ptcount ? round($sumspeed/$ptcount,2): 0;
 
 			// Prevent warnings if empty - GPXIN-28
 			$sanitycheck='';
@@ -838,10 +845,10 @@ class TCXIngest {
 		if (!$this->suppresslocation){
 			$activity->stats->distanceTravelled = array_sum($this->fdist);
                $activity->stats->bounds = new buildBoundsObj(); //GPXIN-26
-			$activity->stats->bounds->Lat->min = min($this->tracklats);
-			$activity->stats->bounds->Lat->max = max($this->tracklats);
-			$activity->stats->bounds->Lon->min = min($this->tracklons);
-			$activity->stats->bounds->Lon->max = max($this->tracklons);
+			$activity->stats->bounds->Lat->min = count($this->tracklats)? min($this->tracklats): 0;
+			$activity->stats->bounds->Lat->max = count($this->tracklats)? max($this->tracklats): 0;
+			$activity->stats->bounds->Lon->min = count($this->tracklons)? min($this->tracklons): 0;
+			$activity->stats->bounds->Lon->max = count($this->tracklons)? max($this->tracklons): 0;
 		}
 
 		if (!$this->suppressdate && sizeof($this->ftimes)){
@@ -1443,15 +1450,45 @@ class TCXIngest {
 	public function computereport($jkey) {
 		$totaltime = 0;	
 		$totaldistance = 0;
+		$totalelev = 0;
 		$stats = $this->getActivity($jkey)->stats;
+		$laps = $this->getActivity($jkey)->laps;
 		foreach ($stats->laps as $lap){				
 			$totaltime +=  (int)$lap->TotalTimeSeconds;
-			$totaldistance += (float)$lap->DistanceMeters;													
+			$totaldistance += (float)$lap->DistanceMeters;			
+		}
+		if ($laps) {
+			$i = 0;
+			foreach ($laps as $lap){	
+				$totallapelev = 0;
+				$lastelev = -1;
+				$lasttime = -1;	
+				foreach ($lap->segments as $segment){
+					foreach ($segment->points as $point) {
+						$time = $point->time;
+						if (($lasttime == -1) || (($time - $lasttime) > 45)){
+							$elev = $point->elevation;
+							if ($lastelev != -1) {
+								if ($elev > $lastelev) {
+									$totallapelev += $elev - $lastelev;																
+									$lastelev = $elev;		
+								}						
+							}
+							$lastelev = $elev;
+							$lasttime = $point->time;
+						}
+						
+					}
+					$stats->laps[$i++]->totalelev = $totallapelev;
+					$totalelev += $totallapelev;	
+				}
+			}
 		}
 		$totalspeed = (3600 * $totaldistance)/$totaltime;
-		$this->getActivity($jkey)->stats->totalspeed = $totalspeed;
-		$this->getActivity($jkey)->stats->totaltime = $totaltime;
-		$this->getActivity($jkey)->stats->totaldistance = $totaldistance;
+		$stats->totalspeed = $totalspeed;
+		$stats->totaltime = $totaltime;
+		$stats->totaldistance = $totaldistance;
+		$stats->totalelev = $totalelev;
 		//print_r($this->getActivity($jkey)->laps);
 	}
 
