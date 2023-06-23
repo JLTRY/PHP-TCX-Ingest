@@ -500,9 +500,6 @@ class TCXIngest {
 							// What is the speed recorded in?
 							//$unit = strtolower(substr(rtrim($speed_string),strlen($speed_string)-3));
 							//ns3 contains speed
-							$ret1 = property_exists($point, 'extensions');
-							$ret2 = property_exists($point->extensions, 'ns3');
-							$ret3 = array_key_exists('Speed', $point->extensions->ns3);
 							if (property_exists($point, 'extensions') && 
 								property_exists($point->extensions, 'ns3') && 
 								array_key_exists('Speed', $point->extensions->ns3)) {
