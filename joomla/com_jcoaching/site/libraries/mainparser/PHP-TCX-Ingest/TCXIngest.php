@@ -502,7 +502,7 @@ class TCXIngest {
 							//ns3 contains speed
 							$ret1 = property_exists($point, 'extensions');
 							$ret2 = property_exists($point->extensions, 'ns3');
-							$ret3 = array_key_exists('Speed', $point->extensions->ns3);
+							$ret3 = is_array($point->extensions->ns3) && array_key_exists('Speed', $point->extensions->ns3);
 							if (property_exists($point, 'extensions') && 
 								property_exists($point->extensions, 'ns3') && 
 								array_key_exists('Speed', $point->extensions->ns3)) {
@@ -1438,31 +1438,31 @@ class TCXIngest {
 		return $gain;
 	}
 
-	
-	public function getSegmentscount($track) {		
+
+	public function getSegmentscount($track) {	
 		return count($this->journey->journeys[$track]->segments);
 	}
-	
-	public function getjourneyscount() {		
+
+	public function getjourneyscount() {	
 		return count($this->journey->journeys);
 	}
-	
+
 	public function computereport($jkey) {
-		$totaltime = 0;	
+		$totaltime = 0;
 		$totaldistance = 0;
 		$totalelev = 0;
 		$stats = $this->getActivity($jkey)->stats;
 		$laps = $this->getActivity($jkey)->laps;
-		foreach ($stats->laps as $lap){				
+		foreach ($stats->laps as $lap){			
 			$totaltime +=  (int)$lap->TotalTimeSeconds;
-			$totaldistance += (float)$lap->DistanceMeters;			
+			$totaldistance += (float)$lap->DistanceMeters;		
 		}
 		if ($laps) {
 			$i = 0;
-			foreach ($laps as $lap){	
+			foreach ($laps as $lap){
 				$totallapelev = 0;
 				$lastelev = -1;
-				$lasttime = -1;	
+				$lasttime = -1;
 				foreach ($lap->segments as $segment){
 					foreach ($segment->points as $point) {
 						$time = $point->time;
@@ -1470,21 +1470,21 @@ class TCXIngest {
 							$elev = $point->elevation;
 							if ($lastelev != -1) {
 								if ($elev > $lastelev) {
-									$totallapelev += $elev - $lastelev;																
-									$lastelev = $elev;		
-								}						
+									$totallapelev += (int)$elev - (int)$lastelev;															
+									$lastelev = $elev;	
+								}					
 							}
 							$lastelev = $elev;
 							$lasttime = $point->time;
 						}
-						
+					
 					}
 					$stats->laps[$i++]->totalelev = $totallapelev;
-					$totalelev += $totallapelev;	
+					$totalelev += $totallapelev;
 				}
 			}
 		}
-		$totalspeed = (3600 * $totaldistance)/$totaltime;
+		$totalspeed = ($totaltime == 0)? 0 : (3600 * $totaldistance)/$totaltime;
 		$stats->totalspeed = $totalspeed;
 		$stats->totaltime = $totaltime;
 		$stats->totaldistance = $totaldistance;
