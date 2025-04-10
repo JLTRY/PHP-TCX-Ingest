@@ -24,7 +24,7 @@ if (file_exists($LOGFILE)){
 	* @return stdclass
 	*/
 class buildBoundsObj {
-	function __construct() {	
+	function __construct() {
 		$this->Lat = new \stdClass();
 		$this->Lat->min = 0;
 		$this->Lat->max = 0;
@@ -63,9 +63,9 @@ class TCXSegment {
     {
 		return array("points");
 	}
-	
+
 	function addPoint()
-	{		
+	{
 		$pt = new TCXPoint();
 		$this->points[] = $pt;
 		return $pt;
@@ -79,7 +79,7 @@ class TCXLap {
 	function __construct(){
 		$this->segments = array();
 	}
-	
+
 	public function __sleep()
     {
 		return array("segments");
@@ -116,7 +116,7 @@ class TCXActivityStats {
 	public $totaltime;
 	public $totaldistance;
 	public $totalelev;
-	
+
 	function __construct($summary= "other"){
 		$this->summary = (string)$summary;
 		$this ->bounds = new BuildBoundsObj();
@@ -135,7 +135,7 @@ class TCXActivityStats {
 		$this->timeDecelerating = 0;
 		$this->distanceTravelled = 0;
 	}
-	
+
 	public function __sleep()
     {
 		return array("summary", 
@@ -148,15 +148,15 @@ class TCXActivityStats {
 			"totalelev"
 		);
 	}
-	
+
 	function addLap($lap) {
 		array_push($this->laps, (object)array('TotalTimeSeconds' => (string)$lap->TotalTimeSeconds,
 									'DistanceMeters' => (string)$lap->DistanceMeters,
 									'Speed' => ($lap->TotalTimeSeconds==0)?0 : (3600*$lap->DistanceMeters)/(int)$lap->TotalTimeSeconds));
-	
+
 	}
 }
-				
+
 //Activity //Trck
 class TCXActivity {
 	public $name;
@@ -164,15 +164,15 @@ class TCXActivity {
 	public $stats;
 	public $laps;
 	public $segments;
-	
-	function __construct($jkey, $trk){		
+
+	function __construct($jkey, $trk){
 		$this->name = (string)$trk->name;
 		$this->jkey = $jkey;
 		$this->segments = new \stdClass();
 		$this->laps = array();
 		$this->stats = new  TCXActivityStats($trk->attributes()['Sport']);
 	}
-	
+
 	public function __sleep()
     {
 		return array("name", 
@@ -180,9 +180,9 @@ class TCXActivity {
 			"laps",
 		);
 	}
-	
 
-	
+
+
 	public function addLap($lap) {
 		$this->stats->addLap($lap);
 		$curlap = new TCXLap();
@@ -195,7 +195,7 @@ class TCXActivity {
 
 
 class TCXIngest {
-	
+
 	protected $file;
 	protected $xml;
 	protected $journey;
@@ -214,7 +214,7 @@ class TCXIngest {
 	protected $suppresselevation = false;
 	protected $suppressdate = false;
 	protected $suppresswptlocation = false;
-	protected $suppresswptele = false;	
+	protected $suppresswptele = false;
 	protected $lastspeed = false;
 	protected $lastspeedm = false;
 	protected $lastrteele = false;
@@ -330,7 +330,7 @@ class TCXIngest {
 	*
 	*/
 	public function ingest(){
-		
+
 		if (!is_object($this->xml)){
 			return false;
 		}
@@ -339,19 +339,19 @@ class TCXIngest {
 		$this->journey->created = new \stdClass();
 		$this->journey->stats = new \stdClass();
 		$this->journey->stats->speedUoM = array();
-		
+
 		$zeroed_stats = array ('trackpoints','recordedDuration','segments','tracks',
 								'maxacceleration','maxdeceleration','mindeceleration',
 								'avgacceleration','avgdeceleration','timeMoving','timeStationary',
 								'timeAccelerating','timeDecelerating','distanceTravelled', 'totalelev');
-		
+
 		foreach ($zeroed_stats as $k){
 			$this->journey->stats->$k = 0;
 		}
-		
+
 		// Bounds introduced in GPXIN-26
 		$this->journey->stats->bounds = new buildBoundsObj();
-		
+
 		// GPXIN-33 Create route related stats object
 		$this->journey->stats->routestats = new \stdClass();
 		$this->journey->stats->routestats->bounds = new buildBoundsObj();                
@@ -366,10 +366,10 @@ class TCXIngest {
 		$this->jeles = array();
 		$this->jeledevs = array();
 		$this->jdist = array(); //GPXIN-6
-        	$this->journeylats = array(); //GPXIN-26
-        	$this->journeylons = array(); //GPXIN-26
+		$this->journeylats = array(); //GPXIN-26
+		$this->journeylons = array(); //GPXIN-26
 		$unit = null;
-		
+
 
 		// Add the metadata
 		$this->journey->created->creator = (string) $this->xml['creator'];
@@ -388,15 +388,15 @@ class TCXIngest {
 	     $this->journey->metadata->AutoCalc = array('speed'=>false);
 		$this->journey->metadata->waypoints = 0; //GPXIN-24
 		$this->journey->metadata->routes = 0;
-		
+
 
 		// There may be multiple tracks in one file
-		foreach ($this->xml->Activities->Activity as $trk){			
+		foreach ($this->xml->Activities->Activity as $trk){
 			// Initialise the stats variables
 			$this->resetTrackStats();
-			$b = 0;	
-			$activity = $this->addActivity($trk);			
-			foreach ($trk->Lap as $lap){				
+			$b = 0;
+			$activity = $this->addActivity($trk);
+			foreach ($trk->Lap as $lap){
 				//specific for tcx
 				$curlap = $activity->addLap($lap);
 				// There may be multiple segments if GPS connectivity was lost - process each seperately
@@ -413,8 +413,8 @@ class TCXIngest {
 					$this->initSegment();
 					$segment = $curlap->addSegment();
 					// Trackpoint details in trk - Push them into our object
-					foreach ($trkseg->Trackpoint as $trkpt){					
-						$time = strtotime((string)$trkpt->Time);				
+					foreach ($trkseg->Trackpoint as $trkpt){
+						$time = strtotime((string)$trkpt->Time);
 						$point = $segment->addPoint();
 						// Handle Extensions (GPXIN-20)
 						if (isset($trkpt->Extensions)){
@@ -452,7 +452,7 @@ class TCXIngest {
 						}
 						// Write the track data - take into account whether we've suppressed any data elements
 						if (!$this->suppresslocation){
-							$position =  $trkpt->Position;	
+							$position =  $trkpt->Position;
 							$lat = $position->LatitudeDegrees; // let's only caste once
 							$lon = $position->LongitudeDegrees;
 
@@ -461,7 +461,7 @@ class TCXIngest {
 
 							/** Implemented in GPXIN-6 - currently experimental so will generally be 0 */
 							$dist = ($this->lastpos)? (string)$trkpt->DistanceMeters - $this->lastpos : 0;
-							//TCXIngest::my_log(sprintf("%f",$dist));		
+							//TCXIngest::my_log(sprintf("%f",$dist));
 							$this->lastpos = (string)$trkpt->DistanceMeters;
 							// Update the stats arrays
 							$this->fdist[] = $dist;
@@ -476,7 +476,7 @@ class TCXIngest {
 							if ($lastele){
 								$change = $ele - $lastele;
 							}
-							$point->elevationChange = $change;						
+							$point->elevationChange = $change;
 							// Update the stats arrays - should be able to make this more efficient later
 							$this->jeles[] = $ele;
 							$this->seles[] = $ele;
@@ -485,7 +485,7 @@ class TCXIngest {
 							$this->seledevs[] = $change;
 							$this->feledevs[] = $change;
 
-							// Update the elevation for the next time round the block	
+							// Update the elevation for the next time round the block
 							$lastele = $ele;
 						}
 						if (!$this->suppressdate){
@@ -530,7 +530,7 @@ class TCXIngest {
 							if (!in_array($unit,$activity->stats->speedUoM)){
 								$activity->stats->speedUoM[] = $unit;
 							}
-							// If there's more than one unit per segment on the other hand, something's wrong!						
+							// If there's more than one unit per segment on the other hand, something's wrong!
 
 						}else{
 							// We also use the speed array to identify the number of trackpoints
@@ -543,7 +543,7 @@ class TCXIngest {
 						// Up the counters
 						$x++;
 					}
-				$this->writeSegmentStats($activity, $segment,$times,$x,$unit,$timemoving,$timestationary);	
+				$this->writeSegmentStats($activity, $segment,$times,$x,$unit,$timemoving,$timestationary);
 				$b++;
 			}
 				$this->writeTrackStats($activity);
@@ -683,7 +683,7 @@ class TCXIngest {
 			$this->journey->metadata->suppression[] = 'wptlocation';
 		}
 		if ($this->suppresswptele){
-			$this->journey->metadata->suppression[] = 'wptele';		
+			$this->journey->metadata->suppression[] = 'wptele';
 		}
 
 	}
@@ -729,13 +729,13 @@ class TCXIngest {
 			$modesearch = array_count_values($this->sspeed);
 			if ($x!=0)
 				$segment->stats->avgspeed = round($this->speed/$x,2);
-			if (is_array($modesearch) && count($modesearch))	
+			if (is_array($modesearch) && count($modesearch))
 				$segment->stats->modalSpeed = array_search(max($modesearch), $modesearch);
 			if (is_array($this->sspeed) && count($this->sspeed))
 			{
 				$segment->stats->minSpeed = min($this->sspeed);
 				$segment->stats->maxSpeed = max($this->sspeed);
-			}	
+			}
 			$segment->stats->speedUoM = $uom;
 		}
 
@@ -839,7 +839,7 @@ class TCXIngest {
 			{
 				$this->highspeeds[] = $activity->stats->maxSpeed;
 				$this->lowspeeds[] = $activity->stats->minSpeed;
-			}	
+			}
 		}
 
 		if (!$this->suppresslocation){
@@ -945,7 +945,7 @@ class TCXIngest {
 	}
 
 
-	
+
 	/** Get ID's of any ingested routes
 	*
 	* @return array
@@ -956,7 +956,7 @@ class TCXIngest {
 			return array();
 		}
 
-		return array_keys((array) $this->journey->related->routes);		
+		return array_keys((array) $this->journey->related->routes);
 	}
 
 	/** Get ID's and names of any ingested routes
@@ -978,7 +978,7 @@ class TCXIngest {
 		return $routes;
 	}
 
-	
+
 	/** Return a copy of the routes object
 	*
 	* @return stdclass
@@ -987,8 +987,8 @@ class TCXIngest {
 	public function getRoutesObject(){
                 return $this->journey->related->routes;
 	}
-	
-	
+
+
 	/** Driver method to keep b/c but also to make more consistent with naming of track related methods
 	*
 	* @return mixed
@@ -996,7 +996,7 @@ class TCXIngest {
 	public function getRoute($id){
             return $this->getRouteByID($id);
 	}
-	
+
 
 	/** Get a route based on it's ID - DEPRECATED
 	*
@@ -1021,7 +1021,7 @@ class TCXIngest {
 	public function getRoutePoint($route,$routepoint){
 		return $this->journey->related->routes->$route->points->$routepoint;
 	}
-	
+
 
 	/** Get Route statistics
 	*
@@ -1302,11 +1302,11 @@ class TCXIngest {
 			case 'date':
 				$this->suppressdate = true;
 				break;
-				
+
                         case 'wptlocation':
                         	$this->suppresswptlocation = true;
                                 break;
-                        	
+                        
                         case 'wptele':
                                 $this->suppresssuppresswptele = true;
                                 break;
@@ -1342,11 +1342,11 @@ class TCXIngest {
 			case 'date':
 				$this->suppressdate = false;
                                 break;
-				
+
                         case 'wptlocation':
                         	$this->suppresswptlocation = false;
                                 break;
-                        	
+                        
                         case 'wptele':
                                 $this->suppresssuppresswptele = false;
                                 break;
@@ -1357,7 +1357,7 @@ class TCXIngest {
 
 		}
 	}
-	
+
 		/** Identify whether an experimental feature has been enabled
 	*
 	* @arg type
@@ -1414,7 +1414,7 @@ class TCXIngest {
 
 		return $resp;
 	}
-	
+
 	/**
 	 * Calculate total elevation gain
 	 *
@@ -1439,11 +1439,11 @@ class TCXIngest {
 	}
 
 
-	public function getSegmentscount($track) {	
+	public function getSegmentscount($track) {
 		return count($this->journey->journeys[$track]->segments);
 	}
 
-	public function getjourneyscount() {	
+	public function getjourneyscount() {
 		return count($this->journey->journeys);
 	}
 
@@ -1453,9 +1453,9 @@ class TCXIngest {
 		$totalelev = 0;
 		$stats = $this->getActivity($jkey)->stats;
 		$laps = $this->getActivity($jkey)->laps;
-		foreach ($stats->laps as $lap){			
+		foreach ($stats->laps as $lap){
 			$totaltime +=  (int)$lap->TotalTimeSeconds;
-			$totaldistance += (float)$lap->DistanceMeters;		
+			$totaldistance += (float)$lap->DistanceMeters;
 		}
 		if ($laps) {
 			$i = 0;
@@ -1470,14 +1470,14 @@ class TCXIngest {
 							$elev = $point->elevation;
 							if ($lastelev != -1) {
 								if ($elev > $lastelev) {
-									$totallapelev += (int)$elev - (int)$lastelev;															
-									$lastelev = $elev;	
-								}					
+									$totallapelev += (int)$elev - (int)$lastelev;
+									$lastelev = $elev;
+								}
 							}
 							$lastelev = $elev;
 							$lasttime = $point->time;
 						}
-					
+
 					}
 					$stats->laps[$i++]->totalelev = $totallapelev;
 					$totalelev += $totallapelev;
