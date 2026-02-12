@@ -473,7 +473,7 @@ class TCXIngest {
 							// This is going to be deprecated (GPXIN-34)
 							$point->elevation = $ele;
 							$change = 0;
-							if ($lastele){
+							if (($lastele != 0) && is_int($lastele) && is_int($ele)){
 								$change = $ele - $lastele;
 							}
 							$point->elevationChange = $change;
@@ -1468,7 +1468,7 @@ class TCXIngest {
 						$time = $point->time;
 						if (($lasttime == -1) || (($time - $lasttime) > 45)){
 							$elev = $point->elevation;
-							if ($lastelev != -1) {
+							if (($lastelev != -1) && ((int)$lastelev != 0)) {
 								if ($elev > $lastelev) {
 									$totallapelev += (int)$elev - (int)$lastelev;
 									$lastelev = $elev;
