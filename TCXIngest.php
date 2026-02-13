@@ -13,11 +13,6 @@
 * Where issue keys are included (GPXIN-[0-9]+), the relevant issue can be viewed at http://projects.bentasker.co.uk/jira_projects/browse/GPXIN.html
 */
 
-$LOGFILE=dirname(__FILE__)."/log.txt";
-if (file_exists($LOGFILE)){
-	unlink($LOGFILE);
-}
-
 
 	/** Builds an object structure to be used to store the outer bounds for longitude and latitude
 	*
@@ -1491,6 +1486,4 @@ class TCXIngest {
 		$stats->totalelev = $totalelev;
 		//print_r($this->getActivity($jkey)->laps);
 	}
-
-
-}
+};
