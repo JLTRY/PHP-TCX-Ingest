@@ -14,20 +14,6 @@
 */
 
 
-    /** Builds an object structure to be used to store the outer bounds for longitude and latitude
-    *
-    * @return stdclass
-    */
-class buildBoundsObj {
-    function __construct() {
-        $this->Lat = new \stdClass();
-        $this->Lat->min = 0;
-        $this->Lat->max = 0;
-        $this->Lon = new \stdClass();
-        $this->Lon->min = 0;
-        $this->Lon->max = 0;
-    }
-}
 
 class TCXPoint {
     public $extensions;
@@ -102,7 +88,6 @@ class TCXActivityStats {
     public $timeAccelerating;
     public $timeDecelerating;
     public $distanceTravelled;
-    public $bounds; 
     public $summary; 
     public $laps;
     public $start;
@@ -114,7 +99,6 @@ class TCXActivityStats {
 
     function __construct($summary= "other"){
         $this->summary = (string)$summary;
-        $this ->bounds = new BuildBoundsObj();
         $this->laps = array();
         $this->speedUoM = array();
         $this->journeyDuration = 0;
@@ -160,12 +144,12 @@ class TCXActivity {
     public $laps;
     public $segments;
 
-    function __construct($jkey, $trk){
-        $this->name = (string)$trk->name;
+    function __construct($jkey, $name , $sport){
+        $this->name = (string)$name;
         $this->jkey = $jkey;
         $this->segments = new \stdClass();
         $this->laps = array();
-        $this->stats = new  TCXActivityStats($trk->attributes()['Sport']);
+        $this->stats = new  TCXActivityStats($sport);
     }
 
     public function __sleep()
@@ -218,8 +202,6 @@ class TCXIngest {
     protected $journeylons;
     protected $segmentlats;
     protected $segmentlons;
-    protected $tracklats;
-    protected $tracklons;
     protected $ingest_version = 1.03;
     protected $entryperiod;
     protected $experimentalFeatures = array('calcElevationGain'); // See GPXIN-17
@@ -342,12 +324,8 @@ class TCXIngest {
             $this->journey->stats->$k = 0;
         }
 
-        // Bounds introduced in GPXIN-26
-        $this->journey->stats->bounds = new buildBoundsObj();
-
         // GPXIN-33 Create route related stats object
         $this->journey->stats->routestats = new \stdClass();
-        $this->journey->stats->routestats->bounds = new buildBoundsObj();
                 
         // Initialise the stats array
         $this->totaltimes = array();
@@ -702,13 +680,10 @@ class TCXIngest {
         $trackcounter = count($this->journey->journeys);
         $jkey = "journey$trackcounter";
 
-        $this->journey->journeys[$jkey] = new TCXActivity($jkey, $trk);
+        $this->journey->journeys[$jkey] = new TCXActivity($jkey, (string)$trk->name, $trk->attributes()['Sport']);
 
         // Used by the Acceleration calculation method
         $this->lasttimestamp = false;
-
-            $this->tracklats = array(); //GPXIN-26
-            $this->tracklons = array(); //GPXIN-26
         return $this->journey->journeys[$jkey] ;
     }
 
@@ -735,13 +710,6 @@ class TCXIngest {
         // Calculate the total distance travelled (feet)
         if (!$this->suppresslocation){
             $segment->stats->distanceTravelled = array_sum($this->sdist);
-            $segment->stats->bounds = new buildBoundsObj(); //GPXIN-26
-            $min = is_array($this->segmentlats) && count($this->segmentlats)? min($this->segmentlats): 0;
-            $max = is_array($this->segmentlats) && count($this->segmentlats)? max($this->segmentlats): 0;
-            $segment->stats->bounds->Lat->min = $min;
-            $segment->stats->bounds->Lat->max = $max;
-            $segment->stats->bounds->Lon->min = $min;
-            $segment->stats->bounds->Lon->max = $max;
         }
 
         if (!$this->suppressdate && sizeof($times)){
@@ -837,11 +805,6 @@ class TCXIngest {
 
         if (!$this->suppresslocation){
             $activity->stats->distanceTravelled = array_sum($this->fdist);
-               $activity->stats->bounds = new buildBoundsObj(); //GPXIN-26
-            $activity->stats->bounds->Lat->min = count($this->tracklats)? min($this->tracklats): 0;
-            $activity->stats->bounds->Lat->max = count($this->tracklats)? max($this->tracklats): 0;
-            $activity->stats->bounds->Lon->min = count($this->tracklons)? min($this->tracklons): 0;
-            $activity->stats->bounds->Lon->max = count($this->tracklons)? max($this->tracklons): 0;
         }
 
         if (!$this->suppressdate && sizeof($this->ftimes)){
